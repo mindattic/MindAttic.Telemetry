@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.1 is the build Unity consumes; keep this project free of third-party dependencies. -->
+    <TargetFrameworks>netstandard2.1;net10.0</TargetFrameworks>
+    <PackageId>MindAttic.Telemetry</PackageId>
+    <!-- HOUSE-LAW-1: whole-number versions only; bump the major. -->
+    <Version>1.0.0</Version>
+    <Description>Raw, replayable event/turn telemetry for games: one append-only NDJSON session per run, crash-safe by construction, genericized across any game's own state/command/event shapes. Host-agnostic core.</Description>
+    <PackageTags>telemetry;replay;analytics;ml;unity;ndjson</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MindAttic.Telemetry.Tests" />
+  </ItemGroup>
+
+</Project>

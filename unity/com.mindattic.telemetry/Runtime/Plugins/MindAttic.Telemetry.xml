@@ -1,0 +1,348 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MindAttic.Telemetry</name>
+    </assembly>
+    <members>
+        <member name="T:System.Runtime.CompilerServices.IsExternalInit">
+            <summary>
+            Polyfill so <c>record</c>/init-only properties compile under netstandard2.1 (this type ships with the
+            runtime from .NET 5 on; older targets need a stand-in with this exact name/namespace).
+            </summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.ITelemetryJson">
+            <summary>
+            JSON used for every record line and the session manifest. On .NET it defaults to System.Text.Json;
+            netstandard2.1 hosts (Unity) must supply one (the Unity package uses Newtonsoft, same split as
+            MindAttic.Capture's <c>ICaptureJson</c>). Serialize camelCase; deserialize case-insensitively.
+            </summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.ITelemetryJson.Serialize``1(``0)">
+            <summary>Serializes <paramref name="value"/> as single-line JSON (no indentation — one record per line).</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.ITelemetryJson.Deserialize``1(System.String)">
+            <summary>Parses <paramref name="json"/>.</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.TelemetryJsonDefaults">
+            <summary>Default <see cref="T:MindAttic.Telemetry.ITelemetryJson"/> for the current platform (null on netstandard2.1 — the host must supply one).</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetryJsonDefaults.Create">
+            <summary>Creates the platform default, or null where none exists (netstandard2.1).</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.TelemetryLogLevel">
+            <summary>Log severity.</summary>
+        </member>
+        <member name="F:MindAttic.Telemetry.TelemetryLogLevel.Debug">
+            <summary>Verbose detail (file opens/closes, orphan scans).</summary>
+        </member>
+        <member name="F:MindAttic.Telemetry.TelemetryLogLevel.Info">
+            <summary>Normal activity.</summary>
+        </member>
+        <member name="F:MindAttic.Telemetry.TelemetryLogLevel.Warning">
+            <summary>Something was skipped or degraded.</summary>
+        </member>
+        <member name="F:MindAttic.Telemetry.TelemetryLogLevel.Error">
+            <summary>A write or read failed.</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.ITelemetryLog">
+            <summary>Logging sink; hosts bridge it to ILogger, Unity's Debug.Log, etc. (mirrors MindAttic.Capture's <c>ICaptureLog</c>).</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.ITelemetryLog.Log(MindAttic.Telemetry.TelemetryLogLevel,System.String,System.Exception)">
+            <summary>Writes one entry.</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.TraceTelemetryLog">
+            <summary>Writes to <see cref="T:System.Diagnostics.Trace"/>; the default when nothing else is configured.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TraceTelemetryLog.MinimumLevel">
+            <summary>Entries below this level are dropped.</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.TraceTelemetryLog.Log(MindAttic.Telemetry.TelemetryLogLevel,System.String,System.Exception)">
+            <inheritdoc/>
+        </member>
+        <member name="T:MindAttic.Telemetry.Telemetry">
+            <summary>
+            Entry point for game/app code. <see cref="M:MindAttic.Telemetry.Telemetry.Begin(MindAttic.Telemetry.TelemetryOptions,System.String,System.Nullable{System.Int64},System.String,MindAttic.Telemetry.TelemetryData)"/> starts a session and makes it <see cref="P:MindAttic.Telemetry.Telemetry.Current"/>;
+            most call sites should just use <see cref="P:MindAttic.Telemetry.Telemetry.Current"/> after that (mirrors MindAttic.Capture's
+            <c>Capture.Current</c> pattern) rather than threading the session instance through everywhere.
+            </summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.Telemetry.Current">
+            <summary>The active session (a no-op instance until <see cref="M:MindAttic.Telemetry.Telemetry.Begin(MindAttic.Telemetry.TelemetryOptions,System.String,System.Nullable{System.Int64},System.String,MindAttic.Telemetry.TelemetryData)"/> is called, or after it finishes).</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.Telemetry.Begin(MindAttic.Telemetry.TelemetryOptions,System.String,System.Nullable{System.Int64},System.String,MindAttic.Telemetry.TelemetryData)">
+            <summary>
+            Starts a new session and sets it as <see cref="P:MindAttic.Telemetry.Telemetry.Current"/>. Also runs a quick, synchronous orphan sweep
+            of the same output folder first (see <see cref="M:MindAttic.Telemetry.TelemetryMaintenance.RecoverOrphans(System.String,MindAttic.Telemetry.ITelemetryJson,MindAttic.Telemetry.ITelemetryLog)"/>) — cheap, since
+            it only ever finds something after a previous run crashed.
+            </summary>
+            <param name="options">Where/how to write.</param>
+            <param name="gameId">Short game/app identifier (e.g. "GridGameGaiden") — the per-game subfolder name.</param>
+            <param name="seed">RNG seed for this run, if there is one (needed to replay a deterministic sim).</param>
+            <param name="contentVersion">Content/ruleset version, if the caller tracks one separately from <see cref="P:MindAttic.Telemetry.TelemetryOptions.AppVersion"/>.</param>
+            <param name="tags">Free-form session-level key/values (stage id, player id, source, ...).</param>
+        </member>
+        <member name="T:MindAttic.Telemetry.TelemetryMaintenance">
+            <summary>
+            Recovers session files an earlier run left as <c>.ndjson.tmp</c> because it didn't shut down cleanly
+            (crash, force-kill, power loss). Every line already flushed to disk is still valid JSON — recovery just
+            appends a synthetic <c>SessionEnd</c> record (<c>{"recovered":true}</c>) and renames the file, the same
+            "every record is independently durable" property that makes the whole format crash-safe in the first place.
+            </summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetryMaintenance.RecoverOrphans(System.String,MindAttic.Telemetry.ITelemetryJson,MindAttic.Telemetry.ITelemetryLog)">
+            <summary>Finalizes every orphaned <c>.ndjson.tmp</c> file under <paramref name="appDir"/> that isn't
+            currently open by a live session (in this or another process). Returns how many were recovered.</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetryMaintenance.IsStillOpen(System.String)">
+            <summary>True when something else still has the file open for writing (a live session owns it).</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.TelemetryOptions">
+            <summary>Everything that configures a telemetry session. Defaults suit MindAttic development machines.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryOptions.Enabled">
+            <summary>Global kill switch. When false, <see cref="M:MindAttic.Telemetry.Telemetry.Begin(MindAttic.Telemetry.TelemetryOptions,System.String,System.Nullable{System.Int64},System.String,MindAttic.Telemetry.TelemetryData)"/> returns a no-op session.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryOptions.OutputRoot">
+            <summary>Where sessions go. A missing drive falls back to <see cref="P:MindAttic.Telemetry.TelemetryOptions.FallbackRoot"/> with a warning.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryOptions.FallbackRoot">
+            <summary>Used when <see cref="P:MindAttic.Telemetry.TelemetryOptions.OutputRoot"/>'s drive is unavailable.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryOptions.AppName">
+            <summary>App/game name: the per-app folder under the root (mirrors MindAttic.Capture's output layout).</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryOptions.AppVersion">
+            <summary>Build/content version written into every session's start record. Never leave this null in
+            production — without it, a balance-rule change between patches is invisible in the recorded data.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryOptions.Json">
+            <summary>JSON implementation (required on netstandard2.1 hosts — see <see cref="T:MindAttic.Telemetry.ITelemetryJson"/>).</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryOptions.Log">
+            <summary>Logging sink.</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetryOptions.ResolveRoot">
+            <summary>Resolves <see cref="P:MindAttic.Telemetry.TelemetryOptions.OutputRoot"/>, falling back to <see cref="P:MindAttic.Telemetry.TelemetryOptions.FallbackRoot"/> if the root's drive
+            doesn't exist (e.g. a dev-only network/RAM drive that isn't mounted on every machine).</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.ITelemetrySession">
+            <summary>
+            One recorded run (a battle, a level, a whole play session — whatever the host calls <see cref="M:MindAttic.Telemetry.Telemetry.Begin(MindAttic.Telemetry.TelemetryOptions,System.String,System.Nullable{System.Int64},System.String,MindAttic.Telemetry.TelemetryData)"/>
+            for). Calls are thread-safe and never throw for runtime problems (write failures log and drop the record
+            rather than crash the game, same contract as MindAttic.Capture's <c>ICapture</c>).
+            </summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.ITelemetrySession.Enabled">
+            <summary>False when disabled (kill switch, or the output root is unwritable); calls become no-ops.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.ITelemetrySession.SessionId">
+            <summary>Unique id for this run; also part of the file name.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.ITelemetrySession.GameId">
+            <summary>The game/app id this session was started for.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.ITelemetrySession.SessionFile">
+            <summary>Full path to the session's NDJSON file (the <c>.tmp</c> path while open; see <see cref="M:MindAttic.Telemetry.ITelemetrySession.FinishAsync(System.Object)"/>).</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.ITelemetrySession.RecordCount">
+            <summary>How many records have been written so far (including session-start).</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.ITelemetrySession.RecordTurn(System.Object,System.Object,System.Boolean,System.Collections.Generic.IEnumerable{System.Object},System.Object)">
+            <summary>
+            Records one full rules-engine turn: the state before, the command submitted, whether it was accepted,
+            every event it produced, and the state after. This is the generic shape every turn/event-sourced game
+            rules engine already produces (GridGameGaiden's <c>BattleEngine.Apply</c> is the reference case) — pass
+            your own serializable DTOs; the core never requires one universal event shape.
+            </summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.ITelemetrySession.RecordEvent(System.String,System.Object)">
+            <summary>
+            Records one lightweight named moment that isn't a full turn — a new game, a shop purchase, a level-up,
+            an expedition starting or ending. This is what fills the gap a turn-only recorder has: everything that
+            happens outside the thing being turn-recorded.
+            </summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.ITelemetrySession.FinishAsync(System.Object)">
+            <summary>Writes the closing record (the game's own outcome payload) and finalizes the file. Safe to call
+            more than once; only the first call does anything.</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.TelemetrySession">
+            <summary>File-backed <see cref="T:MindAttic.Telemetry.ITelemetrySession"/>: one append-only NDJSON file, one line per record,
+            flushed after every write. Crash-safe by construction — every line already on disk is independently valid
+            JSON, and the file stays in a <c>.ndjson.tmp</c> staging name until <see cref="M:MindAttic.Telemetry.TelemetrySession.FinishAsync(System.Object)"/> renames it, so
+            an orphaned file is trivially identifiable on the next run (see <see cref="T:MindAttic.Telemetry.TelemetryMaintenance"/>).</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetrySession.Enabled">
+            <inheritdoc/>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetrySession.SessionId">
+            <inheritdoc/>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetrySession.GameId">
+            <inheritdoc/>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetrySession.SessionFile">
+            <inheritdoc/>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetrySession.RecordCount">
+            <inheritdoc/>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetrySession.RecordTurn(System.Object,System.Object,System.Boolean,System.Collections.Generic.IEnumerable{System.Object},System.Object)">
+            <inheritdoc/>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetrySession.RecordEvent(System.String,System.Object)">
+            <inheritdoc/>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetrySession.FinishAsync(System.Object)">
+            <inheritdoc/>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetrySession.DisposeAsync">
+            <inheritdoc/>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetrySession.FinalizeFile">
+            <summary>Renames the <c>.tmp</c> staging file to its final name — the signal that this session ended cleanly.</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.NullTelemetrySession">
+            <summary>A session that does nothing; used when telemetry is disabled or not initialized.</summary>
+        </member>
+        <member name="F:MindAttic.Telemetry.NullTelemetrySession.Instance">
+            <summary>Shared instance.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.NullTelemetrySession.Enabled">
+            <inheritdoc/>
+        </member>
+        <member name="P:MindAttic.Telemetry.NullTelemetrySession.SessionId">
+            <inheritdoc/>
+        </member>
+        <member name="P:MindAttic.Telemetry.NullTelemetrySession.GameId">
+            <inheritdoc/>
+        </member>
+        <member name="P:MindAttic.Telemetry.NullTelemetrySession.SessionFile">
+            <inheritdoc/>
+        </member>
+        <member name="P:MindAttic.Telemetry.NullTelemetrySession.RecordCount">
+            <inheritdoc/>
+        </member>
+        <member name="M:MindAttic.Telemetry.NullTelemetrySession.RecordTurn(System.Object,System.Object,System.Boolean,System.Collections.Generic.IEnumerable{System.Object},System.Object)">
+            <inheritdoc/>
+        </member>
+        <member name="M:MindAttic.Telemetry.NullTelemetrySession.RecordEvent(System.String,System.Object)">
+            <inheritdoc/>
+        </member>
+        <member name="M:MindAttic.Telemetry.NullTelemetrySession.FinishAsync(System.Object)">
+            <inheritdoc/>
+        </member>
+        <member name="M:MindAttic.Telemetry.NullTelemetrySession.DisposeAsync">
+            <inheritdoc/>
+        </member>
+        <member name="T:MindAttic.Telemetry.TelemetryData">
+            <summary>Key/value data attached to an event or a session's tags; lands in the record's JSON verbatim.</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetryData.#ctor">
+            <summary>Creates an empty, case-insensitive bag.</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetryData.#ctor(System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>Copies <paramref name="source"/>.</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.TelemetryRecordKind">
+            <summary>What kind of line a record is, in sequence within a session file.</summary>
+        </member>
+        <member name="F:MindAttic.Telemetry.TelemetryRecordKind.SessionStart">
+            <summary>The first line: session/game/build metadata.</summary>
+        </member>
+        <member name="F:MindAttic.Telemetry.TelemetryRecordKind.Turn">
+            <summary>A full state/command/event turn (`RecordTurn`) — the unit most games' rules engines produce.</summary>
+        </member>
+        <member name="F:MindAttic.Telemetry.TelemetryRecordKind.Event">
+            <summary>A lightweight named moment (`RecordEvent`) — anything that isn't a full turn.</summary>
+        </member>
+        <member name="F:MindAttic.Telemetry.TelemetryRecordKind.SessionEnd">
+            <summary>The last line on a clean finish: the game's own outcome payload.</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.TelemetryEnvelope">
+            <summary>One line of a session file, with its envelope fields and the game-supplied payload.</summary>
+            <param name="Seq">0-based position in the session (gaps never occur; a session recovered after a crash
+            just ends early).</param>
+            <param name="Kind">What this line is.</param>
+            <param name="AtUtc">Wall-clock time the record was written — the single biggest gap found in
+            GridGameGaiden's original hand-rolled recorder (tick-only timestamps): lets any record be correlated
+            against out-of-band signals, e.g. a MindAttic.Capture video of the same session.</param>
+            <param name="Name">Set for <see cref="F:MindAttic.Telemetry.TelemetryRecordKind.Event"/> records (the event name); null otherwise.</param>
+            <param name="Payload">The game-supplied object: the turn, the event data, the session metadata, or the
+            outcome — whatever type the caller passed to <c>RecordTurn</c>/<c>RecordEvent</c>/<c>Begin</c>/<c>FinishAsync</c>.</param>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetryEnvelope.#ctor(System.Int64,MindAttic.Telemetry.TelemetryRecordKind,System.DateTimeOffset,System.String,System.Object)">
+            <summary>One line of a session file, with its envelope fields and the game-supplied payload.</summary>
+            <param name="Seq">0-based position in the session (gaps never occur; a session recovered after a crash
+            just ends early).</param>
+            <param name="Kind">What this line is.</param>
+            <param name="AtUtc">Wall-clock time the record was written — the single biggest gap found in
+            GridGameGaiden's original hand-rolled recorder (tick-only timestamps): lets any record be correlated
+            against out-of-band signals, e.g. a MindAttic.Capture video of the same session.</param>
+            <param name="Name">Set for <see cref="F:MindAttic.Telemetry.TelemetryRecordKind.Event"/> records (the event name); null otherwise.</param>
+            <param name="Payload">The game-supplied object: the turn, the event data, the session metadata, or the
+            outcome — whatever type the caller passed to <c>RecordTurn</c>/<c>RecordEvent</c>/<c>Begin</c>/<c>FinishAsync</c>.</param>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryEnvelope.Seq">
+            <summary>0-based position in the session (gaps never occur; a session recovered after a crash
+            just ends early).</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryEnvelope.Kind">
+            <summary>What this line is.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryEnvelope.AtUtc">
+            <summary>Wall-clock time the record was written — the single biggest gap found in
+            GridGameGaiden's original hand-rolled recorder (tick-only timestamps): lets any record be correlated
+            against out-of-band signals, e.g. a MindAttic.Capture video of the same session.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryEnvelope.Name">
+            <summary>Set for <see cref="F:MindAttic.Telemetry.TelemetryRecordKind.Event"/> records (the event name); null otherwise.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.TelemetryEnvelope.Payload">
+            <summary>The game-supplied object: the turn, the event data, the session metadata, or the
+            outcome — whatever type the caller passed to <c>RecordTurn</c>/<c>RecordEvent</c>/<c>Begin</c>/<c>FinishAsync</c>.</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.SessionStartPayload">
+            <summary>The session-start payload (first line of every session file).</summary>
+            <param name="GameId">Short game/app identifier (e.g. "GridGameGaiden").</param>
+            <param name="SessionId">Unique per run; also part of the file name.</param>
+            <param name="AppVersion">Build/app version, if the host supplied one.</param>
+            <param name="ContentVersion">Content/ruleset version, if the caller supplied one (<see cref="M:MindAttic.Telemetry.Telemetry.Begin(MindAttic.Telemetry.TelemetryOptions,System.String,System.Nullable{System.Int64},System.String,MindAttic.Telemetry.TelemetryData)"/>).</param>
+            <param name="Seed">RNG seed for the run, if the caller supplied one — needed to replay a deterministic sim.</param>
+            <param name="Tags">Free-form session-level key/values (e.g. stage id, player id, source: "player"/"bot:greedy").</param>
+        </member>
+        <member name="M:MindAttic.Telemetry.SessionStartPayload.#ctor(System.String,System.String,System.String,System.String,System.Nullable{System.Int64},MindAttic.Telemetry.TelemetryData)">
+            <summary>The session-start payload (first line of every session file).</summary>
+            <param name="GameId">Short game/app identifier (e.g. "GridGameGaiden").</param>
+            <param name="SessionId">Unique per run; also part of the file name.</param>
+            <param name="AppVersion">Build/app version, if the host supplied one.</param>
+            <param name="ContentVersion">Content/ruleset version, if the caller supplied one (<see cref="M:MindAttic.Telemetry.Telemetry.Begin(MindAttic.Telemetry.TelemetryOptions,System.String,System.Nullable{System.Int64},System.String,MindAttic.Telemetry.TelemetryData)"/>).</param>
+            <param name="Seed">RNG seed for the run, if the caller supplied one — needed to replay a deterministic sim.</param>
+            <param name="Tags">Free-form session-level key/values (e.g. stage id, player id, source: "player"/"bot:greedy").</param>
+        </member>
+        <member name="P:MindAttic.Telemetry.SessionStartPayload.GameId">
+            <summary>Short game/app identifier (e.g. "GridGameGaiden").</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.SessionStartPayload.SessionId">
+            <summary>Unique per run; also part of the file name.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.SessionStartPayload.AppVersion">
+            <summary>Build/app version, if the host supplied one.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.SessionStartPayload.ContentVersion">
+            <summary>Content/ruleset version, if the caller supplied one (<see cref="M:MindAttic.Telemetry.Telemetry.Begin(MindAttic.Telemetry.TelemetryOptions,System.String,System.Nullable{System.Int64},System.String,MindAttic.Telemetry.TelemetryData)"/>).</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.SessionStartPayload.Seed">
+            <summary>RNG seed for the run, if the caller supplied one — needed to replay a deterministic sim.</summary>
+        </member>
+        <member name="P:MindAttic.Telemetry.SessionStartPayload.Tags">
+            <summary>Free-form session-level key/values (e.g. stage id, player id, source: "player"/"bot:greedy").</summary>
+        </member>
+        <member name="T:MindAttic.Telemetry.TelemetryException">
+            <summary>Thrown by setup/IO code; runtime record calls never throw (they log and drop instead).</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetryException.#ctor(System.String,System.Exception)">
+            <summary>Thrown by setup/IO code; runtime record calls never throw (they log and drop instead).</summary>
+        </member>
+    </members>
+</doc>

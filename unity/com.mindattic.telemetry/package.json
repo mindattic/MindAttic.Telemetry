@@ -1,0 +1,10 @@
+{
+  "name": "com.mindattic.telemetry",
+  "version": "1.0.0",
+  "displayName": "MindAttic Telemetry",
+  "description": "Raw, replayable turn/event telemetry for games: TelemetryUnity.Begin(\"YourGame\") starts a session (per battle/level/run, your call), RecordTurn/RecordEvent append to it, Finish closes it. One append-only NDJSON file per session, crash-safe by construction, genericized across any game's own state/command/event shapes so it's never tied to one game's schema. Output goes to R:\\Telemetry (falls back under Documents\\MindAttic\\Telemetry). Editor and development builds only by default — define MINDATTIC_TELEMETRY to force it into a build.",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
+}

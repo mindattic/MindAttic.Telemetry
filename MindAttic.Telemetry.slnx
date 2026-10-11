@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MindAttic.Telemetry/MindAttic.Telemetry.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MindAttic.Telemetry.Tests/MindAttic.Telemetry.Tests.csproj" />
+  </Folder>
+</Solution>
