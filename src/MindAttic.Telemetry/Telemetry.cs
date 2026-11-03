@@ -17,12 +17,15 @@ public static class Telemetry
     }
 
     /// <summary>
-    /// Starts a new session and sets it as <see cref="Current"/>. Also runs a quick, synchronous orphan sweep
+    /// Starts a new session and sets it as <see cref="Current"/>. A previous <see cref="Current"/> session that
+    /// is still open is finished first (no outcome), so its file is closed and finalized rather than left as an
+    /// open <c>.tmp</c> until garbage collection. Also runs a quick, synchronous orphan sweep
     /// of the same output folder first (see <see cref="TelemetryMaintenance.RecoverOrphans"/>) — cheap, since
     /// it only ever finds something after a previous run crashed.
     /// </summary>
     /// <param name="options">Where/how to write.</param>
-    /// <param name="gameId">Short game/app identifier (e.g. "GridGameGaiden") — the per-game subfolder name.</param>
+    /// <param name="gameId">Short game/app identifier (e.g. "GridGameGaiden"), recorded in the session-start
+    /// record. The output subfolder is <see cref="TelemetryOptions.AppName"/>, not this id.</param>
     /// <param name="seed">RNG seed for this run, if there is one (needed to replay a deterministic sim).</param>
     /// <param name="contentVersion">Content/ruleset version, if the caller tracks one separately from <see cref="TelemetryOptions.AppVersion"/>.</param>
     /// <param name="tags">Free-form session-level key/values (stage id, player id, source, ...).</param>
@@ -30,6 +33,13 @@ public static class Telemetry
     {
         if (options is null) throw new ArgumentNullException(nameof(options));
         if (string.IsNullOrWhiteSpace(gameId)) throw new ArgumentException("A game id is required.", nameof(gameId));
+
+        var previous = Current;
+        if (previous is TelemetrySession)
+        {
+            try { previous.FinishAsync().GetAwaiter().GetResult(); } // synchronous in practice; never throws by contract
+            catch (Exception ex) { options.Log.Warn($"Could not finish the previous telemetry session \"{previous.SessionId}\".", ex); }
+        }
         if (!options.Enabled)
         {
             Current = NullTelemetrySession.Instance;

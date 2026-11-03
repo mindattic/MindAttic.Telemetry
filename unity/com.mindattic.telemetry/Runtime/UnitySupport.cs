@@ -11,7 +11,12 @@ namespace MindAttic.Telemetry.Unity
     {
         private static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
         {
-            ContractResolver = new CamelCasePropertyNamesContractResolver(),
+            // camelCase member names like the .NET System.Text.Json build, but dictionary keys (TelemetryData, game
+            // Dictionary snapshots) verbatim, as that build writes them (it sets no DictionaryKeyPolicy).
+            ContractResolver = new DefaultContractResolver
+            {
+                NamingStrategy = new CamelCaseNamingStrategy { ProcessDictionaryKeys = false, OverrideSpecifiedNames = true },
+            },
             NullValueHandling = NullValueHandling.Ignore,
             Formatting = Formatting.None, // one compact line per record
             Converters = { new StringEnumConverter() },

@@ -36,7 +36,8 @@ public interface ITelemetrySession : IAsyncDisposable
     void RecordEvent(string name, object? data = null);
 
     /// <summary>Writes the closing record (the game's own outcome payload) and finalizes the file. Safe to call
-    /// more than once; only the first call does anything.</summary>
+    /// more than once; only the first call does anything. The SessionEnd record is always written: an outcome
+    /// the serializer rejects is logged and the record is written without it.</summary>
     Task FinishAsync(object? outcome = null);
 }
 
@@ -116,7 +117,8 @@ public sealed class TelemetrySession : ITelemetrySession
             if (_writer is null) return Task.CompletedTask;
             try
             {
-                WriteLineLocked(TelemetryRecordKind.SessionEnd, null, outcome);
+                if (!WriteLineLocked(TelemetryRecordKind.SessionEnd, null, outcome) && outcome is not null)
+                    WriteLineLocked(TelemetryRecordKind.SessionEnd, null, null); // keep the end marker, drop the outcome
                 _writer.Dispose();
                 _writer = null;
                 FinalizeFile();
@@ -158,7 +160,9 @@ public sealed class TelemetrySession : ITelemetrySession
         }
     }
 
-    private void WriteLineLocked(TelemetryRecordKind kind, string? name, object? payload)
+    /// <summary>Writes one record. Returns false only when the payload could not be serialized (the record was
+    /// dropped); a write failure returns true, since retrying it would fail the same way.</summary>
+    private bool WriteLineLocked(TelemetryRecordKind kind, string? name, object? payload)
     {
         string line;
         try
@@ -177,7 +181,7 @@ public sealed class TelemetrySession : ITelemetrySession
             // A game-supplied payload the serializer can't handle (reference cycle, unsupported member type, a
             // throwing getter, ...) drops just this record — runtime record calls never throw into the game.
             _log.Error($"Telemetry session \"{SessionId}\" dropped a {kind} record it could not serialize.", ex);
-            return;
+            return false;
         }
         try
         {
@@ -190,6 +194,7 @@ public sealed class TelemetrySession : ITelemetrySession
             _writeFailed = true;
             _log.Error($"Telemetry session \"{SessionId}\" stopped writing — the rest of this run won't be recorded.", ex);
         }
+        return true;
     }
 }
 

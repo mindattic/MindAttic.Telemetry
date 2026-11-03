@@ -71,12 +71,15 @@
         </member>
         <member name="M:MindAttic.Telemetry.Telemetry.Begin(MindAttic.Telemetry.TelemetryOptions,System.String,System.Nullable{System.Int64},System.String,MindAttic.Telemetry.TelemetryData)">
             <summary>
-            Starts a new session and sets it as <see cref="P:MindAttic.Telemetry.Telemetry.Current"/>. Also runs a quick, synchronous orphan sweep
+            Starts a new session and sets it as <see cref="P:MindAttic.Telemetry.Telemetry.Current"/>. A previous <see cref="P:MindAttic.Telemetry.Telemetry.Current"/> session that
+            is still open is finished first (no outcome), so its file is closed and finalized rather than left as an
+            open <c>.tmp</c> until garbage collection. Also runs a quick, synchronous orphan sweep
             of the same output folder first (see <see cref="M:MindAttic.Telemetry.TelemetryMaintenance.RecoverOrphans(System.String,MindAttic.Telemetry.ITelemetryJson,MindAttic.Telemetry.ITelemetryLog)"/>) — cheap, since
             it only ever finds something after a previous run crashed.
             </summary>
             <param name="options">Where/how to write.</param>
-            <param name="gameId">Short game/app identifier (e.g. "GridGameGaiden") — the per-game subfolder name.</param>
+            <param name="gameId">Short game/app identifier (e.g. "GridGameGaiden"), recorded in the session-start
+            record. The output subfolder is <see cref="P:MindAttic.Telemetry.TelemetryOptions.AppName"/>, not this id.</param>
             <param name="seed">RNG seed for this run, if there is one (needed to replay a deterministic sim).</param>
             <param name="contentVersion">Content/ruleset version, if the caller tracks one separately from <see cref="P:MindAttic.Telemetry.TelemetryOptions.AppVersion"/>.</param>
             <param name="tags">Free-form session-level key/values (stage id, player id, source, ...).</param>
@@ -171,7 +174,8 @@
         </member>
         <member name="M:MindAttic.Telemetry.ITelemetrySession.FinishAsync(System.Object)">
             <summary>Writes the closing record (the game's own outcome payload) and finalizes the file. Safe to call
-            more than once; only the first call does anything.</summary>
+            more than once; only the first call does anything. The SessionEnd record is always written: an outcome
+            the serializer rejects is logged and the record is written without it.</summary>
         </member>
         <member name="T:MindAttic.Telemetry.TelemetrySession">
             <summary>File-backed <see cref="T:MindAttic.Telemetry.ITelemetrySession"/>: one append-only NDJSON file, one line per record,
@@ -208,6 +212,10 @@
         </member>
         <member name="M:MindAttic.Telemetry.TelemetrySession.FinalizeFile">
             <summary>Renames the <c>.tmp</c> staging file to its final name — the signal that this session ended cleanly.</summary>
+        </member>
+        <member name="M:MindAttic.Telemetry.TelemetrySession.WriteLineLocked(MindAttic.Telemetry.TelemetryRecordKind,System.String,System.Object)">
+            <summary>Writes one record. Returns false only when the payload could not be serialized (the record was
+            dropped); a write failure returns true, since retrying it would fail the same way.</summary>
         </member>
         <member name="T:MindAttic.Telemetry.NullTelemetrySession">
             <summary>A session that does nothing; used when telemetry is disabled or not initialized.</summary>

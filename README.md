@@ -95,7 +95,14 @@ Every line is one JSON object: `{"seq": N, "kind": "...", "atUtc": "...", "name"
   game passed in, verbatim.
 - **`Event` payload**: whatever `data` your game passed in, verbatim; `name` carries the event name.
 - **`SessionEnd` payload**: whatever `outcome` your game passed to `FinishAsync`, or `{"recovered":true}`
-  if a previous run crashed and this session was recovered on the next launch.
+  if a previous run crashed and this session was recovered on the next launch. An outcome the serializer
+  rejects is logged and dropped; the `SessionEnd` record is still written, without a payload.
+- Member names are camelCase; dictionary keys (`tags`, any `Dictionary` in your payloads) are written
+  verbatim, identically in the .NET and Unity (Newtonsoft) builds. Unity files written before 2026-11-02
+  camel-cased dictionary keys.
+- `Telemetry.Begin` finishes a still-open previous `Current` session (no outcome) before starting the new
+  one. Sessions are written under `<root>\<AppName>\`; `gameId` is recorded in `SessionStart`, it is not
+  the folder name.
 
 ## Output
 
