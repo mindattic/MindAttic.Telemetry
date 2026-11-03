@@ -19,6 +19,10 @@ public static class TelemetryMaintenance
             if (IsStillOpen(tmp)) continue; // a live session (this process or another) still owns it
             try
             {
+                using (var fs = new FileStream(tmp, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
+                {
+                    DropTornTail(fs);
+                }
                 using (var fs = new FileStream(tmp, FileMode.Append, FileAccess.Write, FileShare.Read))
                 using (var w = new StreamWriter(fs))
                 {
@@ -37,7 +41,7 @@ public static class TelemetryMaintenance
                 recovered++;
                 log.Warn($"Recovered an unfinished telemetry session: {Path.GetFileName(final)} (the previous run didn't shut down cleanly).");
             }
-            catch (IOException ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 log.Warn($"Could not recover \"{tmp}\".", ex);
             }
@@ -53,9 +57,44 @@ public static class TelemetryMaintenance
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
             return false;
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return true;
+            return true; // locked, or not ours to touch: leave it alone either way
         }
+    }
+
+    /// <summary>
+    /// A run killed mid-write (a record larger than the writer's buffer goes to disk in several chunks) can leave
+    /// a partial last line with no trailing newline. Appending the recovery record onto it would glue the two into
+    /// one unparseable line, so cut the file back to the end of its last complete line first.
+    /// </summary>
+    private static void DropTornTail(FileStream fs)
+    {
+        var length = fs.Length;
+        if (length == 0) return;
+        var buffer = new byte[4096];
+        var end = length;
+        while (end > 0)
+        {
+            var start = Math.Max(0, end - buffer.Length);
+            var count = (int)(end - start);
+            fs.Seek(start, SeekOrigin.Begin);
+            var read = 0;
+            while (read < count)
+            {
+                var n = fs.Read(buffer, read, count - read);
+                if (n == 0) break;
+                read += n;
+            }
+            for (var i = read - 1; i >= 0; i--)
+            {
+                if (buffer[i] != (byte)'\n') continue;
+                var keep = start + i + 1;
+                if (keep != length) fs.SetLength(keep);
+                return;
+            }
+            end = start;
+        }
+        fs.SetLength(0); // not even the first line finished
     }
 }

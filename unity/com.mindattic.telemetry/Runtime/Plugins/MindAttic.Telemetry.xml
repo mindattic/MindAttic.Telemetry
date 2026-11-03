@@ -96,6 +96,13 @@
         <member name="M:MindAttic.Telemetry.TelemetryMaintenance.IsStillOpen(System.String)">
             <summary>True when something else still has the file open for writing (a live session owns it).</summary>
         </member>
+        <member name="M:MindAttic.Telemetry.TelemetryMaintenance.DropTornTail(System.IO.FileStream)">
+            <summary>
+            A run killed mid-write (a record larger than the writer's buffer goes to disk in several chunks) can leave
+            a partial last line with no trailing newline. Appending the recovery record onto it would glue the two into
+            one unparseable line, so cut the file back to the end of its last complete line first.
+            </summary>
+        </member>
         <member name="T:MindAttic.Telemetry.TelemetryOptions">
             <summary>Everything that configures a telemetry session. Defaults suit MindAttic development machines.</summary>
         </member>

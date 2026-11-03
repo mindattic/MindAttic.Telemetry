@@ -143,7 +143,7 @@ public sealed class TelemetrySession : ITelemetrySession
             File.Move(SessionFile, final);
             SessionFile = final;
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _log.Warn($"Could not finalize telemetry session file \"{SessionFile}\".", ex);
         }
@@ -160,9 +160,10 @@ public sealed class TelemetrySession : ITelemetrySession
 
     private void WriteLineLocked(TelemetryRecordKind kind, string? name, object? payload)
     {
+        string line;
         try
         {
-            var line = _json.Serialize(new
+            line = _json.Serialize(new
             {
                 seq = _seq,
                 kind = kind.ToString(),
@@ -170,6 +171,16 @@ public sealed class TelemetrySession : ITelemetrySession
                 name,
                 payload,
             });
+        }
+        catch (Exception ex)
+        {
+            // A game-supplied payload the serializer can't handle (reference cycle, unsupported member type, a
+            // throwing getter, ...) drops just this record — runtime record calls never throw into the game.
+            _log.Error($"Telemetry session \"{SessionId}\" dropped a {kind} record it could not serialize.", ex);
+            return;
+        }
+        try
+        {
             _writer!.WriteLine(line);
             _writer.Flush();
             _seq++;
