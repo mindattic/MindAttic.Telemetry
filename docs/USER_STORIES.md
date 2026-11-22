@@ -43,3 +43,4 @@ _Nothing recorded yet._
 | M.TELE-T20 | 2026-11-10 | chore | closed | Adopt the shared docs-site pipeline: turn on GitHub Pages | — |
 | M.TELE-T21 | 2026-11-17 | docs | closed | Update USER_STORIES.md | — |
 | M.TELE-T22 | 2026-11-18 | chore | closed | Add ryand_SNOWCRASH_2026-11-11_12_25_01_net10.0.trx; Update main-tests; Remove ryand_SNOWCRASH_2026-11-02_23_04_27_net10.0.trx | — |
+| M.TELE-T23 | 2026-11-22 | chore | closed | 2026-11-22 morning | — |
