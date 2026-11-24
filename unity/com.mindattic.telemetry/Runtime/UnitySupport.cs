@@ -6,7 +6,7 @@ using UnityEngine;
 namespace MindAttic.Telemetry.Unity
 {
     /// <summary>Newtonsoft-backed <see cref="ITelemetryJson"/> — Unity's netstandard2.1 build has no
-    /// System.Text.Json, same split as MindAttic.Capture's <c>NewtonsoftCaptureJson</c>.</summary>
+    /// System.Text.Json, same split as MindAttic.Media.Capture's <c>NewtonsoftCaptureJson</c>.</summary>
     public sealed class NewtonsoftTelemetryJson : ITelemetryJson
     {
         private static readonly JsonSerializerSettings Settings = new JsonSerializerSettings

@@ -29,7 +29,7 @@ public enum TelemetryRecordKind
 /// <param name="Kind">What this line is.</param>
 /// <param name="AtUtc">Wall-clock time the record was written — the single biggest gap found in
 /// GridGameGaiden's original hand-rolled recorder (tick-only timestamps): lets any record be correlated
-/// against out-of-band signals, e.g. a MindAttic.Capture video of the same session.</param>
+/// against out-of-band signals, e.g. a MindAttic.Media.Capture video of the same session.</param>
 /// <param name="Name">Set for <see cref="TelemetryRecordKind.Event"/> records (the event name); null otherwise.</param>
 /// <param name="Payload">The game-supplied object: the turn, the event data, the session metadata, or the
 /// outcome — whatever type the caller passed to <c>RecordTurn</c>/<c>RecordEvent</c>/<c>Begin</c>/<c>FinishAsync</c>.</param>

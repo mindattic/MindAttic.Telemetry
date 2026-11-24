@@ -8,7 +8,7 @@ namespace MindAttic.Telemetry;
 /// <summary>
 /// JSON used for every record line and the session manifest. On .NET it defaults to System.Text.Json;
 /// netstandard2.1 hosts (Unity) must supply one (the Unity package uses Newtonsoft, same split as
-/// MindAttic.Capture's <c>ICaptureJson</c>). Serialize camelCase; deserialize case-insensitively.
+/// MindAttic.Media.Capture's <c>ICaptureJson</c>). Serialize camelCase; deserialize case-insensitively.
 /// </summary>
 public interface ITelemetryJson
 {

@@ -13,7 +13,7 @@ public sealed class TelemetryOptions
     public string FallbackRoot { get; set; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MindAttic", "Telemetry");
 
-    /// <summary>App/game name: the per-app folder under the root (mirrors MindAttic.Capture's output layout).</summary>
+    /// <summary>App/game name: the per-app folder under the root (mirrors MindAttic.Media.Capture's output layout).</summary>
     public string AppName { get; set; } = "App";
 
     /// <summary>Build/content version written into every session's start record. Never leave this null in

@@ -4,11 +4,11 @@ using UnityEngine;
 namespace MindAttic.Telemetry.Unity
 {
     /// <summary>
-    /// MindAttic.Telemetry for Unity. Unlike MindAttic.Capture (one session per app launch), a telemetry
+    /// MindAttic.Telemetry for Unity. Unlike MindAttic.Media.Capture (one session per app launch), a telemetry
     /// session is scoped to whatever unit of play the game calls <see cref="Begin"/> for — a battle, a level,
     /// a whole run — so there's no auto-boot lifecycle here: call <see cref="Begin"/> when your own "this thing
     /// started" moment happens, and <see cref="Finish"/> when it ends. Production builds ignore all of it
-    /// (same gate as MindAttic.Capture: editor, development builds, or the <c>MINDATTIC_TELEMETRY</c> define).
+    /// (same gate as MindAttic.Media.Capture: editor, development builds, or the <c>MINDATTIC_TELEMETRY</c> define).
     /// Output: R:\Telemetry\{gameId}\{date}_{session}\ (falls back to Documents\MindAttic\Telemetry).
     /// </summary>
     public static class TelemetryUnity

@@ -5,7 +5,7 @@ namespace MindAttic.Telemetry;
 /// <summary>
 /// One recorded run (a battle, a level, a whole play session — whatever the host calls <see cref="Telemetry.Begin"/>
 /// for). Calls are thread-safe and never throw for runtime problems (write failures log and drop the record
-/// rather than crash the game, same contract as MindAttic.Capture's <c>ICapture</c>).
+/// rather than crash the game, same contract as MindAttic.Media.Capture's <c>ICapture</c>).
 /// </summary>
 public interface ITelemetrySession : IAsyncDisposable
 {

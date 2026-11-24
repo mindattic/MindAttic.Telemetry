@@ -15,7 +15,7 @@ public enum TelemetryLogLevel
     Error,
 }
 
-/// <summary>Logging sink; hosts bridge it to ILogger, Unity's Debug.Log, etc. (mirrors MindAttic.Capture's <c>ICaptureLog</c>).</summary>
+/// <summary>Logging sink; hosts bridge it to ILogger, Unity's Debug.Log, etc. (mirrors MindAttic.Media.Capture's <c>ICaptureLog</c>).</summary>
 public interface ITelemetryLog
 {
     /// <summary>Writes one entry.</summary>

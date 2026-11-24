@@ -117,7 +117,7 @@ Falls back to `Documents\MindAttic\Telemetry\...` if the configured output drive
 
 - **Not a replacement for a rules engine's own determinism.** Recording a seed and every command lets
   you *reconstruct* a run by re-simulating; this library doesn't re-simulate anything itself.
-- **No encoding, no agent, no background service.** Unlike MindAttic.Capture (which hands video export
+- **No encoding, no agent, no background service.** Unlike MindAttic.Media.Capture (which hands video export
   off to a detached process), telemetry writes are synchronous file appends — there's nothing to detach,
   and nothing to install.
 - **The reader/flattener are desktop-only** (the `net10.0` target). Nothing inside a running Unity game

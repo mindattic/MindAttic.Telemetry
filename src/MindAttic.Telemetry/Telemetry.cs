@@ -2,7 +2,7 @@ namespace MindAttic.Telemetry;
 
 /// <summary>
 /// Entry point for game/app code. <see cref="Begin"/> starts a session and makes it <see cref="Current"/>;
-/// most call sites should just use <see cref="Current"/> after that (mirrors MindAttic.Capture's
+/// most call sites should just use <see cref="Current"/> after that (mirrors MindAttic.Media.Capture's
 /// <c>Capture.Current</c> pattern) rather than threading the session instance through everywhere.
 /// </summary>
 public static class Telemetry
