@@ -14,7 +14,7 @@
             <summary>
             JSON used for every record line and the session manifest. On .NET it defaults to System.Text.Json;
             netstandard2.1 hosts (Unity) must supply one (the Unity package uses Newtonsoft, same split as
-            MindAttic.Capture's <c>ICaptureJson</c>). Serialize camelCase; deserialize case-insensitively.
+            MindAttic.Media.Capture's <c>ICaptureJson</c>). Serialize camelCase; deserialize case-insensitively.
             </summary>
         </member>
         <member name="M:MindAttic.Telemetry.ITelemetryJson.Serialize``1(``0)">
@@ -45,7 +45,7 @@
             <summary>A write or read failed.</summary>
         </member>
         <member name="T:MindAttic.Telemetry.ITelemetryLog">
-            <summary>Logging sink; hosts bridge it to ILogger, Unity's Debug.Log, etc. (mirrors MindAttic.Capture's <c>ICaptureLog</c>).</summary>
+            <summary>Logging sink; hosts bridge it to ILogger, Unity's Debug.Log, etc. (mirrors MindAttic.Media.Capture's <c>ICaptureLog</c>).</summary>
         </member>
         <member name="M:MindAttic.Telemetry.ITelemetryLog.Log(MindAttic.Telemetry.TelemetryLogLevel,System.String,System.Exception)">
             <summary>Writes one entry.</summary>
@@ -62,7 +62,7 @@
         <member name="T:MindAttic.Telemetry.Telemetry">
             <summary>
             Entry point for game/app code. <see cref="M:MindAttic.Telemetry.Telemetry.Begin(MindAttic.Telemetry.TelemetryOptions,System.String,System.Nullable{System.Int64},System.String,MindAttic.Telemetry.TelemetryData)"/> starts a session and makes it <see cref="P:MindAttic.Telemetry.Telemetry.Current"/>;
-            most call sites should just use <see cref="P:MindAttic.Telemetry.Telemetry.Current"/> after that (mirrors MindAttic.Capture's
+            most call sites should just use <see cref="P:MindAttic.Telemetry.Telemetry.Current"/> after that (mirrors MindAttic.Media.Capture's
             <c>Capture.Current</c> pattern) rather than threading the session instance through everywhere.
             </summary>
         </member>
@@ -119,7 +119,7 @@
             <summary>Used when <see cref="P:MindAttic.Telemetry.TelemetryOptions.OutputRoot"/>'s drive is unavailable.</summary>
         </member>
         <member name="P:MindAttic.Telemetry.TelemetryOptions.AppName">
-            <summary>App/game name: the per-app folder under the root (mirrors MindAttic.Capture's output layout).</summary>
+            <summary>App/game name: the per-app folder under the root (mirrors MindAttic.Media.Capture's output layout).</summary>
         </member>
         <member name="P:MindAttic.Telemetry.TelemetryOptions.AppVersion">
             <summary>Build/content version written into every session's start record. Never leave this null in
@@ -139,7 +139,7 @@
             <summary>
             One recorded run (a battle, a level, a whole play session — whatever the host calls <see cref="M:MindAttic.Telemetry.Telemetry.Begin(MindAttic.Telemetry.TelemetryOptions,System.String,System.Nullable{System.Int64},System.String,MindAttic.Telemetry.TelemetryData)"/>
             for). Calls are thread-safe and never throw for runtime problems (write failures log and drop the record
-            rather than crash the game, same contract as MindAttic.Capture's <c>ICapture</c>).
+            rather than crash the game, same contract as MindAttic.Media.Capture's <c>ICapture</c>).
             </summary>
         </member>
         <member name="P:MindAttic.Telemetry.ITelemetrySession.Enabled">
@@ -281,7 +281,7 @@
             <param name="Kind">What this line is.</param>
             <param name="AtUtc">Wall-clock time the record was written — the single biggest gap found in
             GridGameGaiden's original hand-rolled recorder (tick-only timestamps): lets any record be correlated
-            against out-of-band signals, e.g. a MindAttic.Capture video of the same session.</param>
+            against out-of-band signals, e.g. a MindAttic.Media.Capture video of the same session.</param>
             <param name="Name">Set for <see cref="F:MindAttic.Telemetry.TelemetryRecordKind.Event"/> records (the event name); null otherwise.</param>
             <param name="Payload">The game-supplied object: the turn, the event data, the session metadata, or the
             outcome — whatever type the caller passed to <c>RecordTurn</c>/<c>RecordEvent</c>/<c>Begin</c>/<c>FinishAsync</c>.</param>
@@ -293,7 +293,7 @@
             <param name="Kind">What this line is.</param>
             <param name="AtUtc">Wall-clock time the record was written — the single biggest gap found in
             GridGameGaiden's original hand-rolled recorder (tick-only timestamps): lets any record be correlated
-            against out-of-band signals, e.g. a MindAttic.Capture video of the same session.</param>
+            against out-of-band signals, e.g. a MindAttic.Media.Capture video of the same session.</param>
             <param name="Name">Set for <see cref="F:MindAttic.Telemetry.TelemetryRecordKind.Event"/> records (the event name); null otherwise.</param>
             <param name="Payload">The game-supplied object: the turn, the event data, the session metadata, or the
             outcome — whatever type the caller passed to <c>RecordTurn</c>/<c>RecordEvent</c>/<c>Begin</c>/<c>FinishAsync</c>.</param>
@@ -308,7 +308,7 @@
         <member name="P:MindAttic.Telemetry.TelemetryEnvelope.AtUtc">
             <summary>Wall-clock time the record was written — the single biggest gap found in
             GridGameGaiden's original hand-rolled recorder (tick-only timestamps): lets any record be correlated
-            against out-of-band signals, e.g. a MindAttic.Capture video of the same session.</summary>
+            against out-of-band signals, e.g. a MindAttic.Media.Capture video of the same session.</summary>
         </member>
         <member name="P:MindAttic.Telemetry.TelemetryEnvelope.Name">
             <summary>Set for <see cref="F:MindAttic.Telemetry.TelemetryRecordKind.Event"/> records (the event name); null otherwise.</summary>
