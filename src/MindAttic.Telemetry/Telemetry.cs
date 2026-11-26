@@ -49,7 +49,7 @@ public static class Telemetry
         var root = options.ResolveRoot();
         var appDir = Path.Combine(root, options.AppName);
         try { TelemetryMaintenance.RecoverOrphans(appDir, json, options.Log); }
-        catch (IOException ex) { options.Log.Warn("Orphan telemetry sweep failed.", ex); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { options.Log.Warn("Orphan telemetry sweep failed.", ex); }
 
         var sessionId = NewSessionId();
         var dir = Path.Combine(appDir, $"{DateTime.UtcNow:yyyy-MM-dd}_{sessionId}");
