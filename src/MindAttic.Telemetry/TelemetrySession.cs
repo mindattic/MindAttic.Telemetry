@@ -96,7 +96,15 @@ public sealed class TelemetrySession : ITelemetrySession
     public void RecordTurn(object? before, object? command, bool accepted, IEnumerable<object>? events, object? after)
     {
         if (!Enabled) return;
-        WriteLine(TelemetryRecordKind.Turn, null, new { before, command, accepted, events = events?.ToList(), after });
+        List<object>? eventList;
+        try { eventList = events?.ToList(); }
+        catch (Exception ex)
+        {
+            // A lazy events sequence that throws while enumerated drops just this record — record calls never throw into the game.
+            _log.Error($"Telemetry session \"{SessionId}\" dropped a Turn record whose events could not be enumerated.", ex);
+            return;
+        }
+        WriteLine(TelemetryRecordKind.Turn, null, new { before, command, accepted, events = eventList, after });
     }
 
     /// <inheritdoc/>
